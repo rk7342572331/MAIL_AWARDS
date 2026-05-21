@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+supabase
+python-dotenv
+requests
+msal
+groq
+pandas
+openpyxl
+streamlit
+reportlab
+PyPDF2
+python-multipart
