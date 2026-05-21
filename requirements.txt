@@ -1,0 +1,13 @@
+streamlit
+pandas
+requests
+openpyxl
+supabase
+python-dotenv
+fastapi
+uvicorn
+groq
+msal
+PyPDF2
+reportlab
+python-pptx
