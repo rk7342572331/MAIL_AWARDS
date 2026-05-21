@@ -93,15 +93,24 @@ client = Groq(
 def get_access_token():
 
     print(
-        "\n========== OUTLOOK LOGIN ==========\n"
+        "\n========== OUTLOOK DEVICE LOGIN ==========\n"
     )
 
-    result = (
+    flow = msal_app.initiate_device_flow(
 
-        msal_app.acquire_token_interactive(
+        scopes=SCOPES
+    )
 
-            scopes=SCOPES
+    if "user_code" not in flow:
+
+        raise Exception(
+            "Failed to create device flow"
         )
+
+    print(flow["message"])
+
+    result = msal_app.acquire_token_by_device_flow(
+        flow
     )
 
     if "access_token" not in result:
