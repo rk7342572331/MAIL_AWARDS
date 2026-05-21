@@ -81,12 +81,30 @@ if st.button(
 # ==========================================
 
 stats_response = requests.get(
-
     f"{BACKEND_URL}/dashboard-stats"
 )
 
-stats = stats_response.json()
+print(
+    "STATUS:",
+    stats_response.status_code
+)
 
+print(
+    "RESPONSE:",
+    stats_response.text
+)
+
+if stats_response.status_code == 200:
+
+    stats = stats_response.json()
+
+else:
+
+    st.error(
+        "Dashboard API failed"
+    )
+
+    st.stop()
 
 # ==========================================
 # LAST SYNC
