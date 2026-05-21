@@ -23,9 +23,8 @@ st.title(
     "HR Approval Dashboard"
 )
 
-
 BACKEND_URL = (
-    "http://127.0.0.1:8000"
+    "https://mail-awards-backend.onrender.com"
 )
 
 
