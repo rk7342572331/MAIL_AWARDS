@@ -117,6 +117,52 @@ def get_month_year(date_value):
 
 
 # ==========================================
+# UPLOAD CERTIFICATE TO STORAGE
+# ==========================================
+
+def upload_certificate_to_storage(
+
+    file_path,
+
+    file_name
+
+):
+
+    with open(
+
+        file_path,
+
+        "rb"
+
+    ) as file:
+
+        supabase.storage.from_(
+
+            "certificates"
+
+        ).upload(
+
+            file_name,
+
+            file,
+
+            {
+                "content-type":
+                    "application/pdf"
+            }
+        )
+
+    public_url = (
+
+        supabase.storage
+        .from_("certificates")
+        .get_public_url(file_name)
+    )
+
+    return public_url
+
+
+# ==========================================
 # UPDATE DB
 # ==========================================
 
@@ -124,7 +170,7 @@ def update_certificate_details(
 
     employee_id,
 
-    pdf_path
+    certificate_url
 
 ):
 
@@ -137,7 +183,7 @@ def update_certificate_details(
             str(datetime.now()),
 
         "certificate_path":
-            str(pdf_path)
+            certificate_url
     }
 
     return (
@@ -157,7 +203,7 @@ def update_certificate_details(
 
 
 # ==========================================
-# CREATE CERTIFICATE
+# CREATE CERTIFICATE PDF
 # ==========================================
 
 def create_certificate_pdf(
@@ -399,21 +445,42 @@ def generate_single_certificate(employee):
     )
 
     # ==========================================
-    # UPDATE DB
+    # UPLOAD TO SUPABASE STORAGE
+    # ==========================================
+
+    public_url = upload_certificate_to_storage(
+
+        str(pdf_output),
+
+        f"{filename}.pdf"
+    )
+
+    print(
+        "\n========== STORAGE URL ==========\n"
+    )
+
+    print(public_url)
+
+    print(
+        "\n=================================\n"
+    )
+
+    # ==========================================
+    # UPDATE DATABASE
     # ==========================================
 
     update_certificate_details(
 
         employee["id"],
 
-        pdf_output
+        public_url
     )
 
     print(
         "\n========== CERTIFICATE GENERATED ==========\n"
     )
 
-    print(pdf_output)
+    print(public_url)
 
     print(
         "\n===========================================\n"
@@ -425,7 +492,7 @@ def generate_single_certificate(employee):
             employee_name,
 
         "certificate":
-            str(pdf_output)
+            public_url
     }
 
 
