@@ -1,8 +1,4 @@
-import os
-
 import streamlit as st
-
-import pandas as pd
 
 import requests
 
@@ -32,9 +28,7 @@ render_sidebar()
 # BACKEND URL
 # ==========================================
 
-BACKEND_URL = (
-    "https://mail-awards-backend.onrender.com"
-)
+BACKEND_URL = "https://mail-awards-backend.onrender.com"
 
 
 # ==========================================
@@ -42,176 +36,173 @@ BACKEND_URL = (
 # ==========================================
 
 st.title(
-    "📧 Mail Center"
+    "📨 Mail Center"
 )
 
 st.write(
-    "Manage and send employee award mails."
+    "Generate certificates and send award mails."
 )
 
 
 # ==========================================
-# FETCH MAIL READY RECORDS
+# GENERATE CERTIFICATES
 # ==========================================
 
-try:
+st.subheader(
+    "Generate Certificates"
+)
 
-    response = requests.get(
+if st.button(
+    "Generate Certificates"
+):
 
-        f"{BACKEND_URL}/mail-ready"
-    )
+    with st.spinner(
+        "Generating certificates..."
+    ):
 
-    employees = response.json()
+        response = requests.post(
 
-except Exception as e:
+            f"{BACKEND_URL}/generate-certificates"
+        )
 
-    st.error(str(e))
+        data = response.json()
 
-    st.stop()
+        if data["success"]:
+
+            st.success(
+
+                f"Generated "
+                f"{data['generated_count']} "
+                f"certificates"
+            )
+
+            st.rerun()
+
+        else:
+
+            st.error(
+
+                data.get(
+                    "message",
+                    "Certificate generation failed"
+                )
+            )
+
+
+st.divider()
 
 
 # ==========================================
-# EMPTY
+# FETCH MAIL READY EMPLOYEES
+# ==========================================
+
+response = requests.get(
+
+    f"{BACKEND_URL}/mail-ready"
+)
+
+employees = response.json()
+
+
+# ==========================================
+# NO RECORDS
 # ==========================================
 
 if len(employees) == 0:
 
     st.info(
-        "No mail-ready employees found."
+        "No pending mails to send."
     )
 
     st.stop()
 
 
 # ==========================================
-# DATAFRAME
+# SESSION STATE
 # ==========================================
 
-df = pd.DataFrame(
-    employees
+if "selected_employee" not in st.session_state:
+
+    st.session_state.selected_employee = None
+
+
+# ==========================================
+# LAYOUT
+# ==========================================
+
+left_col, right_col = st.columns(
+    [1, 2]
 )
 
 
 # ==========================================
-# DISPLAY RECORDS
+# LEFT PANEL
 # ==========================================
 
-for _, employee in df.iterrows():
+with left_col:
 
-    with st.container():
+    st.subheader(
+        "Employees"
+    )
 
-        st.markdown("---")
+    for employee in employees:
 
-        # ==========================================
-        # BASIC INFO
-        # ==========================================
+        employee_name = employee[
+            "employee_name"
+        ]
 
-        col1, col2 = st.columns([2, 1])
+        award = employee[
+            "award_category"
+        ]
 
-        with col1:
+        button_label = (
 
-            st.subheader(
-                employee["employee_name"]
-            )
-
-            st.write(
-                f"🏆 Award: {employee['award_category']}"
-            )
-
-            st.write(
-                f"📧 Mail: {employee['employee_mailid']}"
-            )
-
-            st.write(
-                f"🆔 Employee ID: {employee['employee_id']}"
-            )
-
-            st.write(
-                f"🏢 Department: {employee['department']}"
-            )
-
-            st.write(
-                f"🎁 Voucher: {employee.get('gift_card_code', '-')}"
-            )
-
-            st.write(
-                f"💰 Amount: ₹ {employee.get('amount', '-')}"
-            )
-
-        with col2:
-
-            st.success(
-                employee["status"]
-            )
-
-        # ==========================================
-        # CERTIFICATE DOWNLOAD
-        # ==========================================
-
-        certificate_path = employee.get(
-            "certificate_path"
+            f"{employee_name}"
+            f" - "
+            f"{award}"
         )
 
-        st.subheader(
-            "Certificate"
-        )
+        if st.button(
 
-        if (
+            button_label,
 
-            certificate_path
+            use_container_width=True,
 
-            and
-
-            os.path.exists(
-                certificate_path
-            )
-
+            key=f"emp_{employee['id']}"
         ):
 
-            try:
+            st.session_state.selected_employee = employee
 
-                with open(
 
-                    certificate_path,
+# ==========================================
+# RIGHT PANEL
+# ==========================================
 
-                    "rb"
+with right_col:
 
-                ) as pdf_file:
+    employee = st.session_state.selected_employee
 
-                    st.download_button(
+    if employee is None:
 
-                        label="📄 Download Certificate",
-
-                        data=pdf_file,
-
-                        file_name=f"{employee['employee_name']}_certificate.pdf",
-
-                        mime="application/pdf",
-
-                        key=f"download_{employee['id']}"
-                    )
-
-            except Exception as e:
-
-                st.warning(
-                    f"Certificate open error: {str(e)}"
-                )
-
-        else:
-
-            st.warning(
-                "Certificate file not found on cloud server."
-            )
-
-        # ==========================================
-        # MAIL PREVIEW
-        # ==========================================
-
-        st.subheader(
-            "Mail Preview"
+        st.info(
+            "Select employee to preview draft mail."
         )
 
-        default_subject = (
+    else:
+
+        st.subheader(
+            "Draft Mail Preview"
+        )
+
+        employee_name = employee[
+            "employee_name"
+        ]
+
+        award = employee[
+            "award_category"
+        ]
+
+        subject = (
 
             employee.get(
                 "mail_subject"
@@ -220,12 +211,12 @@ for _, employee in df.iterrows():
             or
 
             f"Congratulations "
-            f"{employee['employee_name']} "
+            f"{employee_name} "
             f"on Receiving "
-            f"{employee['award_category']}"
+            f"{award}"
         )
 
-        default_body = (
+        body = (
 
             employee.get(
                 "mail_body"
@@ -234,82 +225,168 @@ for _, employee in df.iterrows():
             or
 
             f"""
-            Dear {employee['employee_name']},
+            Dear {employee_name},
 
-            Congratulations on receiving
-            {employee['award_category']}.
+            Congratulations!
+
+            On behalf of the entire team of Ganit,
+            we would like to express our admiration.
+
+            The work you have done signifies
+            new capabilities for Ganit —
+            the endless dedication you have shown
+            in your work, and the professionalism
+            you have exhibited have not gone unnoticed;
+            you are an inspiration to every fellow Ganitan.
+
+            Please find attached your
+            award certificate.
 
             Regards,
-            Ganit Team
+            HR Team
+            Ganit
             """
         )
 
-        subject = st.text_input(
+        edited_subject = st.text_input(
 
-            "Subject",
+            "Mail Subject",
 
-            value=default_subject,
-
-            key=f"subject_{employee['id']}"
+            value=subject
         )
 
-        body = st.text_area(
+        edited_body = st.text_area(
 
-            "Body",
+            "Mail Body",
 
-            value=default_body,
+            value=body,
 
-            height=250,
-
-            key=f"body_{employee['id']}"
+            height=300
         )
 
         # ==========================================
-        # SEND BUTTON
+        # VOUCHER DETAILS
         # ==========================================
+
+        st.subheader(
+            "Voucher Details"
+        )
+
+        st.table({
+
+            "Field": [
+
+                "Gift Card Code",
+
+                "Reference ID",
+
+                "Validity",
+
+                "Amount"
+            ],
+
+            "Value": [
+
+                employee.get(
+                    "gift_card_code",
+                    "-"
+                ),
+
+                employee.get(
+                    "reference_id",
+                    "-"
+                ),
+
+                employee.get(
+                    "validity",
+                    "-"
+                ),
+
+                employee.get(
+                    "amount",
+                    "-"
+                )
+            ]
+        })
+
+        # ==========================================
+        # CERTIFICATE
+        # ==========================================
+
+        st.subheader(
+            "Certificate"
+        )
+
+        certificate_url = employee.get(
+            "certificate_path"
+        )
+
+        if certificate_url:
+
+            st.link_button(
+
+                "📄 Open Certificate",
+
+                certificate_url
+            )
+
+        else:
+
+            st.warning(
+                "Certificate not available"
+            )
+
+        # ==========================================
+        # SEND MAIL
+        # ==========================================
+
+        st.subheader(
+            "Send Mail"
+        )
 
         if st.button(
 
-            f"Send Mail to {employee['employee_name']}",
+            "Send Mail",
 
-            key=f"send_{employee['id']}"
+            use_container_width=True
         ):
 
-            payload = {
+            with st.spinner(
+                "Sending mail..."
+            ):
 
-                "custom_subject":
-                    subject,
+                payload = {
 
-                "custom_body":
-                    body
-            }
+                    "custom_subject":
+                        edited_subject,
 
-            try:
+                    "custom_body":
+                        edited_body
+                }
 
-                send_response = requests.post(
+                response = requests.post(
 
                     f"{BACKEND_URL}/send-mail/{employee['id']}",
 
                     json=payload
                 )
 
-                result = send_response.json()
+                data = response.json()
 
-                if result.get("success"):
+                if data["success"]:
 
                     st.success(
-                        result["message"]
+                        data["message"]
                     )
+
+                    st.rerun()
 
                 else:
 
                     st.error(
-                        result.get(
+
+                        data.get(
                             "message",
                             "Mail sending failed"
                         )
                     )
-
-            except Exception as e:
-
-                st.error(str(e))
